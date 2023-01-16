@@ -1,0 +1,64 @@
+version: '3'
+services:
+  mariadb:
+    image: mariadb:latest
+    container_name: work-mariadb
+    restart: always
+    environment:
+      # SELECT PASSWORD('yourpassword');
+      - MARIADB_ROOT_PASSWORD_HASH=HASH
+      - MARIADB_AUTO_UPGRADE=yes
+    volumes:
+      - ./config-files/mysql/conf.d/:/etc/mysql/conf.d
+      - ../mysql:/var/lib/mysql
+      - ../mysql_backup:/backup
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: work-phpmyadmin
+    environment:
+      - PMA_HOST=mariadb
+    restart: always
+    ports:
+      - 49000:80
+    volumes:
+      - ../phpmyadmin/sessions:/sessions
+    depends_on:
+      - mariadb
+  
+  php:
+    container_name: work-php-7.1
+    build:
+      context: build-php
+      args:
+        phpbuild: 7.1-fpm
+    ports:
+      - 49001:9000
+    expose:
+      - 9000
+    depends_on:
+      - mariadb
+    volumes:
+      - ../www/:/usr/src/myapp/
+      - ../www/:/var/www/myapp/
+      - ../www/:/var/www/html/
+      - ./config-files/php/php.ini:/usr/local/etc/php/php.ini
+    restart: always
+
+  nginx:
+    image: nginx:latest
+    container_name: work-nginx
+    ports:
+      - 49080:80
+      - 49443:443
+    depends_on:
+      - php
+    volumes:
+      - ../www/:/var/www/html/
+      - ./config-files/nginx/conf.d/:/etc/nginx/conf.d
+      - ../log/access.log:/var/log/nginx/access.log
+      - ../log/error.log:/var/log/nginx/error.log
+      - ../ssl:/etc/ssl
+    restart: always
+
+# docker-compose -p "work" -f docker-compose.yml up --build

@@ -1,0 +1,5 @@
+www/*
+!www/phpinfo.php
+mysql/*
+!mysql/.gitkeep
+# log/*
